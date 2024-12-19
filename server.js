@@ -2,35 +2,54 @@ const express = require("express");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const cors = require("cors");
-const bodyParser = require("body-parser");
 require("dotenv").config();
+const cors = require('cors');
 
 const app = express();
 const port = process.env.PORT || 5000;
 
+// CORS configuration
+const allowedOrigins = ['http://127.0.0.1:5500']; // or '*' to allow all origins
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+      callback(null, true); // allow request
+    } else {
+      callback(new Error('Not allowed by CORS')); // reject request
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE'], // specify allowed HTTP methods
+  allowedHeaders: ['Content-Type', 'Authorization'], // specify allowed headers
+};
+
+app.use(cors(corsOptions)); // Apply CORS middleware
 
 // Middleware
-app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json()); // Using built-in express.json() instead of body-parser
 
 // MongoDB Atlas Connection
 mongoose.connect(process.env.MONGO_URI, {
-    
-  }).then(() => console.log("Connected to MongoDB"))
-    .catch(err => console.error("MongoDB connection error:", err));
   
+}).then(() => console.log("Connected to MongoDB"))
+  .catch(err => console.error("MongoDB connection error:", err));
 
-// User Model
-const User = mongoose.model("User", new mongoose.Schema({
+// User Model with email validation and password length check
+const userSchema = new mongoose.Schema({
   username: String,
-  email: { type: String, unique: true },
-  password: String,
-}));
+  email: { type: String, unique: true, required: true, match: /^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/ },
+  password: { type: String, required: true, minlength: 6 }
+});
+
+const User = mongoose.model("User", userSchema);
 
 // Registration Route
 app.post("/register", async (req, res) => {
   const { username, email, password } = req.body;
+
+  if (!username || !email || !password) {
+    return res.status(400).json({ message: "Please provide all required fields" });
+  }
 
   try {
     const existingUser = await User.findOne({ email });
@@ -56,6 +75,10 @@ app.post("/register", async (req, res) => {
 // Login Route
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ message: "Please provide both email and password" });
+  }
 
   try {
     const user = await User.findOne({ email });
