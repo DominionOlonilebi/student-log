@@ -8,22 +8,9 @@ const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 5000;
 
-// CORS configuration
-const allowedOrigins = ['http://127.0.0.1:5500']; // or '*' to allow all origins
 
-const corsOptions = {
-  origin: (origin, callback) => {
-    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
-      callback(null, true); // allow request
-    } else {
-      callback(new Error('Not allowed by CORS')); // reject request
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE'], // specify allowed HTTP methods
-  allowedHeaders: ['Content-Type', 'Authorization'], // specify allowed headers
-};
 
-app.use(cors(corsOptions)); // Apply CORS middleware
+app.use(cors()); // Apply CORS middleware
 
 // Middleware
 app.use(express.json()); // Using built-in express.json() instead of body-parser
@@ -42,6 +29,10 @@ const userSchema = new mongoose.Schema({
 });
 
 const User = mongoose.model("User", userSchema);
+
+app.get("/",(req,res)=>{
+  res.send({status:"Connected"})
+})
 
 // Registration Route
 app.post("/register", async (req, res) => {
